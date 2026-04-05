@@ -1,3 +1,7 @@
 from django.contrib import admin
+from .models import Level, Employee, Evaluation, Objective
 
-# Register your models here.
+admin.site.register(Level)
+admin.site.register(Employee)
+admin.site.register(Evaluation)
+admin.site.register(Objective)

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EvalTrack - Year End Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow">
+
+    <h1 class="text-2xl font-bold mb-4">Year-End Evaluation</h1>
+
+    <!-- EMPLOYEE INFO -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+
+        <!-- Employee Dropdown -->
+        <select id="employee" class="border p-2 rounded col-span-2">
+            <option value="">Select Employee</option>
+        </select>
+
+        <!-- Level (auto-filled) -->
+        <select id="level" class="border p-2 rounded">
+            <option value="">Select Level</option>
+        </select>
+
+        <!-- Performance Period -->
+        <input id="period" placeholder="Performance Period" class="border p-2 rounded col-span-2">
+
+    </div>
+
+    <!-- OBJECTIVES -->
+    <div>
+        <h2 class="text-xl font-semibold mb-2">Objectives</h2>
+
+        <div id="objectives-container"></div>
+
+        <button onclick="addObjective()" class="mt-3 bg-blue-500 text-white px-4 py-2 rounded">
+            + Add Objective
+        </button>
+    </div>
+
+    <!-- COMMENTS -->
+    <div class="mt-6">
+        <textarea id="employee_comment" placeholder="Employee Comments" class="w-full border p-2 rounded mb-2"></textarea>
+    </div>
+
+    <!-- SUBMIT -->
+    <button onclick="submitEvaluation()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded">
+        Submit Evaluation
+    </button>
+
+</div>
+
+<script>
+
+const API_BASE = "http://127.0.0.1:8000/api";
+
+let employeesData = []; // store employees for later use
+
+
+// ========================
+// LOAD EMPLOYEES
+// ========================
+async function loadEmployees() {
+    const res = await fetch(`${API_BASE}/employees/`);
+    const data = await res.json();
+
+    employeesData = data;
+
+    const select = document.getElementById("employee");
+
+    data.forEach(emp => {
+        const option = document.createElement("option");
+        option.value = emp.id;
+        option.textContent = `${emp.name} (${emp.level_name})`;
+        select.appendChild(option);
+    });
+}
+
+
+// ========================
+// LOAD LEVELS
+// ========================
+async function loadLevels() {
+    const res = await fetch(`${API_BASE}/levels/`);
+    const data = await res.json();
+
+    const select = document.getElementById("level");
+
+    data.forEach(level => {
+        const option = document.createElement("option");
+        option.value = level.id;
+        option.textContent = `${level.name} (${level.individual_percentage}%)`;
+        select.appendChild(option);
+    });
+}
+
+
+// ========================
+// AUTO-FILL LEVEL
+// ========================
+document.getElementById("employee").addEventListener("change", function () {
+    const selected = employeesData.find(e => e.id == this.value);
+
+    if (selected) {
+        document.getElementById("level").value = selected.level;
+    }
+});
+
+
+// ========================
+// ADD OBJECTIVE
+// ========================
+let objectiveCount = 0;
+
+function addObjective() {
+    if (objectiveCount >= 5) {
+        alert("Maximum 5 objectives only");
+        return;
+    }
+
+    objectiveCount++;
+
+    const container = document.getElementById("objectives-container");
+
+    const div = document.createElement("div");
+    div.className = "border p-3 rounded mt-2";
+
+    div.innerHTML = `
+        <p class="font-semibold mb-1">Goal ${objectiveCount}</p>
+
+        <input placeholder="Description" class="border p-1 w-full mb-1 description">
+
+        <input type="number" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
+
+        <input placeholder="Measure" class="border p-1 w-full mb-1 measure">
+
+        <input placeholder="Target" class="border p-1 w-full mb-1 target">
+    `;
+
+    container.appendChild(div);
+}
+
+
+// ========================
+// SUBMIT
+// ========================
+async function submitEvaluation() {
+
+    const employee = document.getElementById("employee").value;
+    const period = document.getElementById("period").value;
+    const comment = document.getElementById("employee_comment").value;
+
+    if (!employee || !period) {
+        alert("Please complete required fields");
+        return;
+    }
+
+    const objectiveDivs = document.querySelectorAll("#objectives-container > div");
+
+    if (objectiveDivs.length < 3) {
+        alert("Minimum 3 objectives required");
+        return;
+    }
+
+    let objectives = [];
+
+    objectiveDivs.forEach((div, index) => {
+        objectives.push({
+            order: index + 1,
+            description: div.querySelector(".description").value,
+            weight: parseFloat(div.querySelector(".weight").value),
+            measure: div.querySelector(".measure").value,
+            target: div.querySelector(".target").value
+        });
+    });
+
+    const payload = {
+        employee: employee,
+        performance_period: period,
+        employee_comment: comment,
+        objectives: objectives
+    };
+
+    const res = await fetch(`${API_BASE}/evaluations/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        alert("Evaluation submitted!");
+        location.reload();
+    } else {
+        const err = await res.json();
+        console.error(err);
+        alert("Error submitting evaluation");
+    }
+}
+
+
+// ========================
+// INIT
+// ========================
+loadEmployees();
+loadLevels();
+
+</script>
+
+</body>
+</html>
