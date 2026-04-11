@@ -7,14 +7,46 @@ from .serializers import (
     EvaluationSerializer,
     ObjectiveSerializer,
 )
+from django.contrib.auth import authenticate, login
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+
+
+def login_view(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+
+        if user:
+            login(request, user)
+            return redirect("/evaluation/")
+        else:
+            return render(request, "login.html", {"error": "Invalid credentials"})
+
+    return render(request, "login.html")
 
 
 def home(request):
     return render(request, 'index.html')
 
+@login_required
 def evaluation_page(request):
-    return render(request, 'evaluation.html')
-# ========================
+    try:
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        return render(request, 'login.html', {
+            'error': 'No employee profile linked to this account'
+        })
+    return render(request, 'evaluation.html', {
+        'employee': employee
+    })
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
 # LEVELS
 # ========================
 class LevelListAPIView(generics.ListAPIView):

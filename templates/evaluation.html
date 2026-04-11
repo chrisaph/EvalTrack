@@ -16,22 +16,22 @@
     <div class="grid grid-cols-2 gap-4 mb-6">
 
         <!-- Employee Search -->
-        <input list="employeeList" id="employee" placeholder="Search Name" class="border p-2 rounded col-span-2">
 
-        <datalist id="employeeList"></datalist>
 
         <!-- Level (auto-filled) -->
-    <div class="col-span-2 text-sm text-gray-700 bg-gray-100 p-3 rounded">
-        <p><strong>Employee ID:</strong> <span id="employeeIdText">-</span></p>
-        <p><strong>Position:</strong> <span id="positionText">-</span></p>
-        <p><strong>Department:</strong> <span id="departmentText">-</span></p>
-        <p><strong>Level:</strong> <span id="levelText">-</span></p>
-        <p><strong>Immediate Superior:</strong> <span id="managerText">-</span></p>
-        <p><strong>Company Objective:</strong> <span id="companyPercent">-</span>%</p>
-        <p><strong>Individual Objective:</strong> <span id="individualPercent">-</span>%</p>
-    </div>
+<div class="col-span-2 text-sm text-gray-700 bg-gray-100 p-3 rounded">
+    <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+    <p><strong>Position:</strong> {{ employee.position }}</p>
+    <p><strong>Department:</strong> {{ employee.department }}</p>
+    <p><strong>Level:</strong> {{ employee.level.name }}</p>
+    <p><strong>Immediate Superior:</strong> {{ employee.manager.name|default:"-" }}</p>
+    <p><strong>Company Objective:</strong> {{ employee.level.company_percentage }}%</p>
+    <p><strong>Individual Objective:</strong> {{ employee.level.individual_percentage }}%</p>
+    <hr class="my-2">
+    <p id="period"></p>
+</div>
 
-<p id="period" class="border p-2 rounded col-span-2 bg-gray-100"></p>
+
 </div>
     <!-- OBJECTIVES -->
     <div>
@@ -50,17 +50,23 @@
     </div>
 
     <!-- SUBMIT -->
-    <button onclick="submitEvaluation()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded">
-        Submit Evaluation
+    <button id="submitBtn" onclick="submitEvaluation()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded">
+    Submit Evaluation
     </button>
 
 </div>
 
 <script>
 
+    function getCSRFToken() {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+}
+
 const API_BASE = "http://127.0.0.1:8000/api";
 
-let employeesData = []; // store employees for later use
 
 
 
@@ -72,58 +78,22 @@ function setPerformancePeriod() {
 }
 
 
-// ========================
-// AUTO-FILL LEVEL
-// ========================
-document.getElementById("employee").addEventListener("change", function () {
-    const selected = employeesData.find(
-        e => e.name.toLowerCase() === this.value.toLowerCase()
-    );
-
-    if (selected) {
-    document.getElementById("employeeIdText").textContent = selected.employee_id;
-    document.getElementById("positionText").textContent = selected.position;
-    document.getElementById("departmentText").textContent = selected.department;
-
-    document.getElementById("levelText").textContent = selected.level_name;
-
-    // 🔥 NEW
-    document.getElementById("managerText").textContent = selected.manager_name || "-";
-
-    document.getElementById("companyPercent").textContent = selected.level_company_percentage || "-";
-    document.getElementById("individualPercent").textContent = selected.level_individual_percentage || "-";
-} else {
-    document.getElementById("employeeIdText").textContent = "-";
-    document.getElementById("positionText").textContent = "-";
-    document.getElementById("departmentText").textContent = "-";
-
-    document.getElementById("levelText").textContent = "Invalid employee";
-
-    // 🔥 NEW
-    document.getElementById("managerText").textContent = "-";
-
-    document.getElementById("companyPercent").textContent = "-";
-    document.getElementById("individualPercent").textContent = "-";
-}
-});
-
-//SEARCH EMPLOYEE:
-
-async function loadEmployees() {
-    const res = await fetch(`${API_BASE}/employees/`);
-    const data = await res.json();
-
-    employeesData = data;
-
-    const list = document.getElementById("employeeList");
-
-    data.forEach(emp => {
-        const option = document.createElement("option");
-        option.value = emp.name; // searchable text
-        option.dataset.id = emp.id;
-        list.appendChild(option);
-    });
-}
+{#//SEARCH EMPLOYEE:#}
+{##}
+{#async function loadEmployees() {#}
+{#    const res = await fetch(`${API_BASE}/employees/`);#}
+{#    const data = await res.json();#}
+{##}
+{#    employeesData = data;#}
+{##}
+{#    const list = document.getElementById("employeeList");#}
+{##}
+{#    data.forEach(emp => {#}
+{#        const option = document.createElement("option");#}
+{#        option.value = emp.name; // searchable text#}
+{#        option.dataset.id = emp.id;#}
+{#        list.appendChild(option);#}
+{#    });#}
 
 
 
@@ -146,16 +116,20 @@ function addObjective() {
     div.className = "border p-3 rounded mt-2";
 
     div.innerHTML = `
-        <p class="font-semibold mb-1">Goal ${objectiveCount}</p>
+    <p class="font-semibold mb-1">Goal ${objectiveCount}</p>
 
-        <input placeholder="Description" class="border p-1 w-full mb-1 description">
+    <input placeholder="Description" class="border p-1 w-full mb-1 description">
 
-        <input type="number" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
+    <input type="date" class="border p-1 w-full mb-1 due_when">
 
-        <input placeholder="Measure" class="border p-1 w-full mb-1 measure">
+    <input type="number" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
 
-        <input placeholder="Target" class="border p-1 w-full mb-1 target">
-    `;
+    <input placeholder="Measure" class="border p-1 w-full mb-1 measure">
+
+    <input placeholder="Target" class="border p-1 w-full mb-1 target">
+
+    <input type="number" placeholder="Employee Actual (%)" class="border p-1 w-full mb-1 employee_actual">
+`;
 
     container.appendChild(div);
 }
@@ -166,17 +140,13 @@ function addObjective() {
 // ========================
 async function submitEvaluation() {
 
-    const employeeName = document.getElementById("employee").value;
 
-    const selectedEmployee = employeesData.find(
-    e => e.name.toLowerCase() === employeeName.toLowerCase());
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
 
-    if (!selectedEmployee) {
-        alert("Please select a valid employee");
-        return;
-    }
 
-    const employee = selectedEmployee.id;
+    const employee = {{ employee.id }};
+
 
     const period = (new Date().getFullYear() - 1).toString();
     const comment = document.getElementById("employee_comment").value;
@@ -185,20 +155,60 @@ async function submitEvaluation() {
 
     if (objectiveDivs.length < 3) {
         alert("Minimum 3 objectives required");
+        submitBtn.disabled = false; // ✅ FIX
         return;
     }
 
-    let objectives = [];
 
-    objectiveDivs.forEach((div, index) => {
-        objectives.push({
-            order: index + 1,
-            description: div.querySelector(".description").value,
-            weight: parseFloat(div.querySelector(".weight").value),
-            measure: div.querySelector(".measure").value,
-            target: div.querySelector(".target").value
-        });
+let objectives = [];
+
+for (let i = 0; i < objectiveDivs.length; i++) {
+    const div = objectiveDivs[i];
+
+    const description = div.querySelector(".description").value.trim();
+    const due_when = div.querySelector(".due_when").value;
+    const weight = parseFloat(div.querySelector(".weight").value);
+    const measure = div.querySelector(".measure").value.trim();
+    const target = div.querySelector(".target").value.trim();
+    const actual = parseFloat(div.querySelector(".employee_actual").value);
+
+    if (!description || !due_when || !weight || !measure || !target || isNaN(actual)) {
+        alert("All objective fields must be filled");
+        submitBtn.disabled = false; // ✅ FIX
+        return;
+    }
+
+    if (weight <= 0) {
+        alert("Weight must be greater than 0");
+        submitBtn.disabled = false; // ✅ FIX
+        return;
+    }
+
+    if (actual > 110) {
+        alert("Employee actual cannot exceed 110%");
+        submitBtn.disabled = false; // ✅ FIX
+        return;
+    }
+
+    objectives.push({
+        order: i + 1,
+        description,
+        due_when,
+        weight,
+        measure,
+        target,
+        employee_actual: actual
     });
+}
+
+    const totalWeight = objectives.reduce((sum, obj) => sum + obj.weight, 0);
+    const maxWeight = {{ employee.level.individual_percentage }};
+
+    if (totalWeight > maxWeight) {
+    alert(`Total weight cannot exceed ${maxWeight}%`);
+    submitBtn.disabled = false; // ✅ FIX
+    return;
+    }
 
     const payload = {
         employee: employee,
@@ -210,27 +220,34 @@ async function submitEvaluation() {
     const res = await fetch(`${API_BASE}/evaluations/`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
         },
         body: JSON.stringify(payload)
     });
 
     if (res.ok) {
-        alert("Evaluation submitted!");
-        location.reload();
+        alert("Evaluation submitted successfully!");
+        window.location.href = "/";  // ✅ redirect
+
     } else {
         const err = await res.json();
         console.error(err);
         alert("Error submitting evaluation");
+        submitBtn.disabled = false; // 🔥 re-enable if failed
     }
 }
+
+
 
 // ========================
 // INIT
 // ========================
-loadEmployees();
-setPerformancePeriod();
 
+setPerformancePeriod();
+addObjective();
+addObjective();
+addObjective();
 </script>
 
 </body>

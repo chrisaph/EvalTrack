@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-
+from django.contrib.auth.models import User
 
 # ========================
 # LEVELS (with percentages)
@@ -18,6 +18,8 @@ class Level(models.Model):
 # EMPLOYEES
 # ========================
 class Employee(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+
     employee_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=150)
     position = models.CharField(max_length=150)
@@ -72,6 +74,9 @@ class Objective(models.Model):
     order = models.IntegerField(default=1)
 
     description = models.TextField()
+
+    due_when = models.DateField(null=True, blank=True)
+
     weight = models.FloatField()
 
     measure = models.CharField(max_length=255)
