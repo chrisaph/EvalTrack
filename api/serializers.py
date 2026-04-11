@@ -41,7 +41,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
 # OBJECTIVE SERIALIZER
 # ========================
 class ObjectiveSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField()
     evaluation = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Objective
+        fields = '__all__'
 
     class Meta:
         model = Objective
@@ -53,7 +58,9 @@ class ObjectiveSerializer(serializers.ModelSerializer):
 class EvaluationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         objectives = data.get('objectives', [])
-        employee = data.get('employee')
+
+        # 🔥 FIX: handle PATCH (no employee in data)
+        employee = data.get('employee') or self.instance.employee
 
         total_weight = sum(obj.get('weight', 0) for obj in objectives)
         max_weight = employee.level.individual_percentage
@@ -83,7 +90,31 @@ class EvaluationSerializer(serializers.ModelSerializer):
             'objectives',
         ]
 
+    def update(self, instance, validated_data):
+        objectives_data = validated_data.pop('objectives', [])
 
+        print("OBJECTIVES DATA:", objectives_data)  # ✅ here
+
+        instance.manager_comment = validated_data.get(
+            'manager_comment', instance.manager_comment
+        )
+        instance.save()
+
+        for obj_data in objectives_data:
+            print("SINGLE OBJECT:", obj_data)  # ✅ here
+
+            obj_id = obj_data.get('id')
+
+            try:
+                obj = instance.objectives.get(id=obj_id)
+            except Objective.DoesNotExist:
+                print("OBJECT NOT FOUND:", obj_id)  # ✅ debug
+                continue
+
+            obj.manager_actual = obj_data.get('manager_actual', obj.manager_actual)
+            obj.save()
+
+        return instance
 
     # ========================
     # CREATE (with objectives)
@@ -97,24 +128,3 @@ class EvaluationSerializer(serializers.ModelSerializer):
 
         return evaluation
 
-    # ========================
-    # UPDATE (optional basic)
-    # ========================
-    def update(self, instance, validated_data):
-        objectives_data = validated_data.pop('objectives', None)
-
-        instance.employee = validated_data.get('employee', instance.employee)
-        instance.performance_period = validated_data.get('performance_period', instance.performance_period)
-        instance.employee_comment = validated_data.get('employee_comment', instance.employee_comment)
-        instance.manager_comment = validated_data.get('manager_comment', instance.manager_comment)
-        instance.date_completed = validated_data.get('date_completed', instance.date_completed)
-
-        instance.save()
-
-        # simple replace strategy
-        if objectives_data is not None:
-            instance.objectives.all().delete()
-            for obj_data in objectives_data:
-                Objective.objects.create(evaluation=instance, **obj_data)
-
-        return instance

@@ -5,6 +5,8 @@ from .views import (
     EvaluationListCreateAPIView,
     EvaluationRetrieveUpdateDestroyAPIView,
     ObjectiveListAPIView,
+    manager_page,
+    manager_evaluation_page
 )
 
 urlpatterns = [
@@ -12,5 +14,5 @@ urlpatterns = [
     path('employees/', EmployeeListAPIView.as_view()),
     path('evaluations/', EvaluationListCreateAPIView.as_view()),
     path('evaluations/<int:pk>/', EvaluationRetrieveUpdateDestroyAPIView.as_view()),
-    path('objectives/', ObjectiveListAPIView.as_view()),
+    path('objectives/', ObjectiveListAPIView.as_view())
 ]

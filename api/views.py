@@ -22,13 +22,28 @@ def login_view(request):
 
         if user:
             login(request, user)
-            return redirect("/evaluation/")
+
+            try:
+                employee = user.employee
+            except Employee.DoesNotExist:
+                return render(request, "login.html", {
+                    "error": "No employee profile linked"
+                })
+
+            # 🔥 CHECK IF MANAGER
+            if Employee.objects.filter(manager=employee).exists():
+                return redirect('/manager/')
+
+            # otherwise normal employee
+            return redirect('/evaluation/')
+
         else:
-            return render(request, "login.html", {"error": "Invalid credentials"})
+            return render(request, "login.html", {
+                "error": "Invalid credentials"
+            })
 
+    # ✅ REQUIRED FOR GET REQUEST
     return render(request, "login.html")
-
-
 def home(request):
     return render(request, 'index.html')
 
@@ -42,6 +57,26 @@ def evaluation_page(request):
         })
     return render(request, 'evaluation.html', {
         'employee': employee
+    })
+def manager_page(request):
+    manager = request.user.employee
+
+    employees = Employee.objects.filter(manager=manager)
+
+    return render(request, 'manager.html', {
+        'employees': employees
+    })
+def manager_evaluation_page(request, pk):
+    manager = request.user.employee
+
+    evaluation = Evaluation.objects.get(id=pk)
+
+    # 🔥 SECURITY CHECK
+    if evaluation.employee.manager != manager:
+        return redirect('/manager/')
+
+    return render(request, 'manager_evaluation.html', {
+        'evaluation': evaluation
     })
 
 def logout_view(request):
