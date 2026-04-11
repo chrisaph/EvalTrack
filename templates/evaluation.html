@@ -46,7 +46,9 @@
 
     <!-- COMMENTS -->
     <div class="mt-6">
-        <textarea id="employee_comment" placeholder="Employee Comments" class="w-full border p-2 rounded mb-2"></textarea>
+    <textarea id="employee_comment">
+    {{ evaluation.employee_comment|default:'' }}
+    </textarea>
     </div>
 
     <!-- SUBMIT -->
@@ -57,6 +59,25 @@
 </div>
 
 <script>
+const evaluationId = {{ evaluation.id|default:"null" }};
+const existingEvaluation = {
+        objectives: [
+            {% if evaluation %}
+                {% for obj in evaluation.objectives.all %}
+                {
+                    id: {{ obj.id }},
+                    description: "{{ obj.description|escapejs }}",
+                    due_when: "{{ obj.due_when|date:'Y-m-d' }}",
+                    weight: {{ obj.weight }},
+                    measure: "{{ obj.measure|escapejs }}",
+                    target: "{{ obj.target|escapejs }}",
+                    employee_actual: {{ obj.employee_actual|default:0 }}
+                },
+                {% endfor %}
+            {% endif %}
+        ],
+        employee_comment: "{{ evaluation.employee_comment|default:''|escapejs }}"
+    };
 
     function getCSRFToken() {
     return document.cookie
@@ -102,7 +123,7 @@ function setPerformancePeriod() {
 // ========================
 let objectiveCount = 0;
 
-function addObjective() {
+function addObjective(data = null) {
     if (objectiveCount >= 5) {
         alert("Maximum 5 objectives only");
         return;
@@ -118,17 +139,19 @@ function addObjective() {
     div.innerHTML = `
     <p class="font-semibold mb-1">Goal ${objectiveCount}</p>
 
-    <input placeholder="Description" class="border p-1 w-full mb-1 description">
+    <input value="${data?.description || ''}" placeholder="Description" class="border p-1 w-full mb-1 description">
 
-    <input type="date" class="border p-1 w-full mb-1 due_when">
+    <input type="date" value="${data?.due_when || ''}" class="border p-1 w-full mb-1 due_when">
 
-    <input type="number" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
+    <input type="number" value="${data?.weight || ''}" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
 
-    <input placeholder="Measure" class="border p-1 w-full mb-1 measure">
+    <input value="${data?.measure || ''}" placeholder="Measure" class="border p-1 w-full mb-1 measure">
 
-    <input placeholder="Target" class="border p-1 w-full mb-1 target">
+    <input value="${data?.target || ''}" placeholder="Target" class="border p-1 w-full mb-1 target">
 
-    <input type="number" placeholder="Employee Actual (%)" class="border p-1 w-full mb-1 employee_actual">
+    <input type="number" value="${data?.employee_actual || ''}" placeholder="Employee Actual (%)"
+    class="border p-1 w-full mb-1 employee_actual"
+    data-id="${data?.id || ''}">
 `;
 
     container.appendChild(div);
@@ -191,16 +214,17 @@ for (let i = 0; i < objectiveDivs.length; i++) {
     }
 
     objectives.push({
-        order: i + 1,
-        description,
-        due_when,
-        weight,
-        measure,
-        target,
-        employee_actual: actual
+        id: parseInt(div.querySelector(".employee_actual").dataset.id) || null,
+
+        description: div.querySelector(".description").value,
+        due_when: div.querySelector(".due_when").value,
+        weight: parseFloat(div.querySelector(".weight").value),
+        measure: div.querySelector(".measure").value,
+        target: div.querySelector(".target").value,
+        employee_actual: parseFloat(div.querySelector(".employee_actual").value)
     });
 }
-
+    console.log("OBJECTIVES SENT:", objectives);
     const totalWeight = objectives.reduce((sum, obj) => sum + obj.weight, 0);
     const maxWeight = {{ employee.level.individual_percentage }};
 
@@ -217,8 +241,16 @@ for (let i = 0; i < objectiveDivs.length; i++) {
         objectives: objectives
     };
 
-    const res = await fetch(`${API_BASE}/evaluations/`, {
-        method: "POST",
+let url = `${API_BASE}/evaluations/`;
+let method = "POST";
+
+if (evaluationId) {
+    url = `${API_BASE}/evaluations/${evaluationId}/`;
+    method = "PATCH";
+}
+
+const res = await fetch(url, {
+    method: method,
         headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": getCSRFToken()
@@ -248,10 +280,15 @@ for (let i = 0; i < objectiveDivs.length; i++) {
 // ========================
 
 setPerformancePeriod();
-addObjective();
-addObjective();
-addObjective();
 
+if (existingEvaluation.objectives.length > 0) {
+    existingEvaluation.objectives.forEach(obj => addObjective(obj));
+    document.getElementById("employee_comment").value = existingEvaluation.employee_comment;
+} else {
+    addObjective();
+    addObjective();
+    addObjective();
+}
 
 </script>
 

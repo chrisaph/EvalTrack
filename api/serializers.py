@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Level, Employee, Evaluation, Objective
-
+from django.utils import timezone
 
 # ========================
 # LEVEL SERIALIZER
@@ -41,17 +41,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
 # OBJECTIVE SERIALIZER
 # ========================
 class ObjectiveSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField()
+    id = serializers.IntegerField(required=False)  # 🔥 FIX
     evaluation = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Objective
         fields = '__all__'
-
-    class Meta:
-        model = Objective
-        fields = '__all__'
-
 # ========================
 # EVALUATION SERIALIZER
 # ========================
@@ -59,23 +54,23 @@ class EvaluationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         objectives = data.get('objectives', [])
 
-        # 🔥 FIX: handle PATCH (no employee in data)
-        employee = data.get('employee') or self.instance.employee
+        employee = data.get('employee') or getattr(self.instance, 'employee', None)
 
-        total_weight = sum(obj.get('weight', 0) for obj in objectives)
-        max_weight = employee.level.individual_percentage
+        if employee:
+            total_weight = sum(obj.get('weight', 0) for obj in objectives)
+            max_weight = employee.level.individual_percentage
 
-        if total_weight > max_weight:
-            raise serializers.ValidationError(
-                f"Total weight cannot exceed {max_weight}%"
-            )
+            if total_weight > max_weight:
+                raise serializers.ValidationError(
+                    f"Total weight cannot exceed {max_weight}%"
+                )
 
         return data
 
     employee_name = serializers.CharField(source='employee.name', read_only=True)
 
     # 🔥 Nested objectives (IMPORTANT)
-    objectives = ObjectiveSerializer(many=True)
+    objectives = ObjectiveSerializer(many=True, required=False)
 
     class Meta:
         model = Evaluation
@@ -91,28 +86,40 @@ class EvaluationSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        objectives_data = validated_data.pop('objectives', [])
+        objectives_data = validated_data.pop('objectives', None)
 
-        print("OBJECTIVES DATA:", objectives_data)  # ✅ here
-
+        instance.employee_comment = validated_data.get(
+            'employee_comment', instance.employee_comment
+        )
         instance.manager_comment = validated_data.get(
             'manager_comment', instance.manager_comment
         )
+
+        # only set when manager submits
+        if 'manager_comment' in validated_data:
+            instance.date_completed = timezone.now().date()
+
         instance.save()
 
-        for obj_data in objectives_data:
-            print("SINGLE OBJECT:", obj_data)  # ✅ here
+        if objectives_data is not None:
+            for obj_data in objectives_data:
+                obj_id = obj_data.get('id')
 
-            obj_id = obj_data.get('id')
+                try:
+                    obj = instance.objectives.get(id=obj_id)
+                except Objective.DoesNotExist:
+                    continue
 
-            try:
-                obj = instance.objectives.get(id=obj_id)
-            except Objective.DoesNotExist:
-                print("OBJECT NOT FOUND:", obj_id)  # ✅ debug
-                continue
+                obj.description = obj_data.get('description', obj.description)
+                obj.due_when = obj_data.get('due_when', obj.due_when)
+                obj.weight = obj_data.get('weight', obj.weight)
+                obj.measure = obj_data.get('measure', obj.measure)
+                obj.target = obj_data.get('target', obj.target)
 
-            obj.manager_actual = obj_data.get('manager_actual', obj.manager_actual)
-            obj.save()
+                obj.employee_actual = obj_data.get('employee_actual', obj.employee_actual)
+                obj.manager_actual = obj_data.get('manager_actual', obj.manager_actual)
+
+                obj.save()
 
         return instance
 
@@ -121,10 +128,46 @@ class EvaluationSerializer(serializers.ModelSerializer):
     # ========================
     def create(self, validated_data):
         objectives_data = validated_data.pop('objectives')
-        evaluation = Evaluation.objects.create(**validated_data)
+
+        evaluation = Evaluation.objects.create(
+            **validated_data,
+            date_completed=timezone.now().date()
+        )
 
         for obj_data in objectives_data:
             Objective.objects.create(evaluation=evaluation, **obj_data)
 
         return evaluation
 
+        # ========================
+        # 🔁 UPDATE EXISTING
+        # ========================
+        if existing:
+            # update basic fields
+            existing.employee_comment = validated_data.get(
+                'employee_comment', existing.employee_comment
+            )
+
+            existing.date_completed = timezone.now().date()
+            existing.save()
+
+            # 🔥 replace objectives
+            existing.objectives.all().delete()
+
+            for obj_data in objectives_data:
+                Objective.objects.create(evaluation=existing, **obj_data)
+
+            return existing
+
+        # ========================
+        # 🆕 CREATE NEW
+        # ========================
+        evaluation = Evaluation.objects.create(
+            **validated_data,
+            date_completed=timezone.now().date()
+        )
+
+        for obj_data in objectives_data:
+            Objective.objects.create(evaluation=evaluation, **obj_data)
+
+        return evaluation

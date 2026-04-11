@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 
+
 # ========================
 # LEVELS (with percentages)
 # ========================
@@ -101,9 +102,11 @@ class Objective(models.Model):
         if self.weight < 0:
             raise ValidationError("Weight cannot be negative")
 
-
-
     def save(self, *args, **kwargs):
+        # 🔥 compute score if manager_actual exists
+        if self.manager_actual is not None:
+            self.score = (self.manager_actual / 100) * self.weight
+
         self.full_clean()
         super().save(*args, **kwargs)
 

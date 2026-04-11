@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
-
+from datetime import datetime
 
 def login_view(request):
     if request.method == "POST":
@@ -49,14 +49,19 @@ def home(request):
 
 @login_required
 def evaluation_page(request):
-    try:
-        employee = request.user.employee
-    except Employee.DoesNotExist:
-        return render(request, 'login.html', {
-            'error': 'No employee profile linked to this account'
-        })
+    employee = request.user.employee
+
+    year = str(datetime.now().year - 1)
+
+    evaluation = Evaluation.objects.filter(
+        employee=employee,
+        performance_period=year
+    ).prefetch_related('objectives').first()
+
     return render(request, 'evaluation.html', {
-        'employee': employee
+        'employee': employee,
+        'evaluation': evaluation,
+        'year': year
     })
 def manager_page(request):
     manager = request.user.employee
