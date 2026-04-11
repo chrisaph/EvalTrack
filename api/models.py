@@ -101,13 +101,7 @@ class Objective(models.Model):
         if self.weight < 0:
             raise ValidationError("Weight cannot be negative")
 
-        total_weight = sum(
-            obj.weight for obj in self.evaluation.objectives.all()
-            if obj.id != self.id
-        ) + self.weight
 
-        if total_weight > self.evaluation.employee.level.individual_percentage:
-            raise ValidationError("Total weight exceeds allowed percentage")
 
     def save(self, *args, **kwargs):
         self.full_clean()

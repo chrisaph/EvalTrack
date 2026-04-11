@@ -232,8 +232,11 @@ for (let i = 0; i < objectiveDivs.length; i++) {
 
     } else {
         const err = await res.json();
-        console.error(err);
-        alert("Error submitting evaluation");
+        console.log(err);
+        alert(JSON.stringify(err, null, 2));
+        {#const err = await res.json();#}
+        {#console.error(err);#}
+        {#alert("Error submitting evaluation");#}
         submitBtn.disabled = false; // 🔥 re-enable if failed
     }
 }
@@ -248,6 +251,8 @@ setPerformancePeriod();
 addObjective();
 addObjective();
 addObjective();
+
+
 </script>
 
 </body>

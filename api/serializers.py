@@ -41,15 +41,30 @@ class EmployeeSerializer(serializers.ModelSerializer):
 # OBJECTIVE SERIALIZER
 # ========================
 class ObjectiveSerializer(serializers.ModelSerializer):
+    evaluation = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Objective
         fields = '__all__'
-
 
 # ========================
 # EVALUATION SERIALIZER
 # ========================
 class EvaluationSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        objectives = data.get('objectives', [])
+        employee = data.get('employee')
+
+        total_weight = sum(obj.get('weight', 0) for obj in objectives)
+        max_weight = employee.level.individual_percentage
+
+        if total_weight > max_weight:
+            raise serializers.ValidationError(
+                f"Total weight cannot exceed {max_weight}%"
+            )
+
+        return data
+
     employee_name = serializers.CharField(source='employee.name', read_only=True)
 
     # 🔥 Nested objectives (IMPORTANT)
@@ -67,6 +82,8 @@ class EvaluationSerializer(serializers.ModelSerializer):
             'date_completed',
             'objectives',
         ]
+
+
 
     # ========================
     # CREATE (with objectives)
