@@ -15,21 +15,24 @@
     <!-- EMPLOYEE INFO -->
     <div class="grid grid-cols-2 gap-4 mb-6">
 
-        <!-- Employee Dropdown -->
-        <select id="employee" class="border p-2 rounded col-span-2">
-            <option value="">Select Employee</option>
-        </select>
+        <!-- Employee Search -->
+        <input list="employeeList" id="employee" placeholder="Search Name" class="border p-2 rounded col-span-2">
+
+        <datalist id="employeeList"></datalist>
 
         <!-- Level (auto-filled) -->
-        <select id="level" class="border p-2 rounded">
-            <option value="">Select Level</option>
-        </select>
-
-        <!-- Performance Period -->
-        <input id="period" placeholder="Performance Period" class="border p-2 rounded col-span-2">
-
+    <div class="col-span-2 text-sm text-gray-700 bg-gray-100 p-3 rounded">
+        <p><strong>Employee ID:</strong> <span id="employeeIdText">-</span></p>
+        <p><strong>Position:</strong> <span id="positionText">-</span></p>
+        <p><strong>Department:</strong> <span id="departmentText">-</span></p>
+        <p><strong>Level:</strong> <span id="levelText">-</span></p>
+        <p><strong>Immediate Superior:</strong> <span id="managerText">-</span></p>
+        <p><strong>Company Objective:</strong> <span id="companyPercent">-</span>%</p>
+        <p><strong>Individual Objective:</strong> <span id="individualPercent">-</span>%</p>
     </div>
 
+<p id="period" class="border p-2 rounded col-span-2 bg-gray-100"></p>
+</div>
     <!-- OBJECTIVES -->
     <div>
         <h2 class="text-xl font-semibold mb-2">Objectives</h2>
@@ -60,41 +63,12 @@ const API_BASE = "http://127.0.0.1:8000/api";
 let employeesData = []; // store employees for later use
 
 
-// ========================
-// LOAD EMPLOYEES
-// ========================
-async function loadEmployees() {
-    const res = await fetch(`${API_BASE}/employees/`);
-    const data = await res.json();
-
-    employeesData = data;
-
-    const select = document.getElementById("employee");
-
-    data.forEach(emp => {
-        const option = document.createElement("option");
-        option.value = emp.id;
-        option.textContent = `${emp.name} (${emp.level_name})`;
-        select.appendChild(option);
-    });
-}
 
 
-// ========================
-// LOAD LEVELS
-// ========================
-async function loadLevels() {
-    const res = await fetch(`${API_BASE}/levels/`);
-    const data = await res.json();
-
-    const select = document.getElementById("level");
-
-    data.forEach(level => {
-        const option = document.createElement("option");
-        option.value = level.id;
-        option.textContent = `${level.name} (${level.individual_percentage}%)`;
-        select.appendChild(option);
-    });
+//Year subtract for performance period
+function setPerformancePeriod() {
+    const year = new Date().getFullYear() - 1;
+    document.getElementById("period").innerHTML = `<strong>Year:</strong> ${year}`;
 }
 
 
@@ -102,12 +76,55 @@ async function loadLevels() {
 // AUTO-FILL LEVEL
 // ========================
 document.getElementById("employee").addEventListener("change", function () {
-    const selected = employeesData.find(e => e.id == this.value);
+    const selected = employeesData.find(
+        e => e.name.toLowerCase() === this.value.toLowerCase()
+    );
 
     if (selected) {
-        document.getElementById("level").value = selected.level;
-    }
+    document.getElementById("employeeIdText").textContent = selected.employee_id;
+    document.getElementById("positionText").textContent = selected.position;
+    document.getElementById("departmentText").textContent = selected.department;
+
+    document.getElementById("levelText").textContent = selected.level_name;
+
+    // 🔥 NEW
+    document.getElementById("managerText").textContent = selected.manager_name || "-";
+
+    document.getElementById("companyPercent").textContent = selected.level_company_percentage || "-";
+    document.getElementById("individualPercent").textContent = selected.level_individual_percentage || "-";
+} else {
+    document.getElementById("employeeIdText").textContent = "-";
+    document.getElementById("positionText").textContent = "-";
+    document.getElementById("departmentText").textContent = "-";
+
+    document.getElementById("levelText").textContent = "Invalid employee";
+
+    // 🔥 NEW
+    document.getElementById("managerText").textContent = "-";
+
+    document.getElementById("companyPercent").textContent = "-";
+    document.getElementById("individualPercent").textContent = "-";
+}
 });
+
+//SEARCH EMPLOYEE:
+
+async function loadEmployees() {
+    const res = await fetch(`${API_BASE}/employees/`);
+    const data = await res.json();
+
+    employeesData = data;
+
+    const list = document.getElementById("employeeList");
+
+    data.forEach(emp => {
+        const option = document.createElement("option");
+        option.value = emp.name; // searchable text
+        option.dataset.id = emp.id;
+        list.appendChild(option);
+    });
+}
+
 
 
 // ========================
@@ -149,14 +166,20 @@ function addObjective() {
 // ========================
 async function submitEvaluation() {
 
-    const employee = document.getElementById("employee").value;
-    const period = document.getElementById("period").value;
-    const comment = document.getElementById("employee_comment").value;
+    const employeeName = document.getElementById("employee").value;
 
-    if (!employee || !period) {
-        alert("Please complete required fields");
+    const selectedEmployee = employeesData.find(
+    e => e.name.toLowerCase() === employeeName.toLowerCase());
+
+    if (!selectedEmployee) {
+        alert("Please select a valid employee");
         return;
     }
+
+    const employee = selectedEmployee.id;
+
+    const period = (new Date().getFullYear() - 1).toString();
+    const comment = document.getElementById("employee_comment").value;
 
     const objectiveDivs = document.querySelectorAll("#objectives-container > div");
 
@@ -202,12 +225,11 @@ async function submitEvaluation() {
     }
 }
 
-
 // ========================
 // INIT
 // ========================
 loadEmployees();
-loadLevels();
+setPerformancePeriod();
 
 </script>
 

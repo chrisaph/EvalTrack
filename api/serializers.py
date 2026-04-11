@@ -16,6 +16,9 @@ class LevelSerializer(serializers.ModelSerializer):
 # ========================
 class EmployeeSerializer(serializers.ModelSerializer):
     level_name = serializers.CharField(source='level.name', read_only=True)
+    level_company_percentage = serializers.IntegerField(source='level.company_percentage', read_only=True)
+    level_individual_percentage = serializers.IntegerField(source='level.individual_percentage', read_only=True)
+
     manager_name = serializers.CharField(source='manager.name', read_only=True)
 
     class Meta:
@@ -28,10 +31,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'department',
             'level',
             'level_name',
+            'level_company_percentage',
+            'level_individual_percentage',
             'manager',
             'manager_name',
         ]
-
 
 # ========================
 # OBJECTIVE SERIALIZER
