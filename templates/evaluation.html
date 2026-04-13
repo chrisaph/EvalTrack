@@ -140,7 +140,14 @@ function addObjective(data = null) {
     div.className = "border p-3 rounded mt-2";
 
     div.innerHTML = `
-<p class="font-semibold mb-2">Goal ${objectiveCount}</p>
+<div class="flex justify-between items-center mb-2">
+    <p class="font-semibold text-lg">Goal ${objectiveCount}</p>
+    <button type="button"
+        onclick="removeObjective(this)"
+        class="text-red-500 text-sm hover:underline">
+        Delete
+    </button>
+</div>
 
 <label class="text-sm font-medium">Description</label>
 <input value="${data?.description || ''}" placeholder="Enter description"
@@ -293,7 +300,21 @@ const res = await fetch(url, {
     }
 }
 
+function removeObjective(button) {
+    const container = document.getElementById("objectives-container");
 
+    // remove the goal div
+    button.closest("div.border").remove();
+
+    // update count
+    objectiveCount--;
+
+    // 🔥 re-number goals
+    const goals = container.querySelectorAll("div.border");
+    goals.forEach((goal, index) => {
+        goal.querySelector("p").innerText = `Goal ${index + 1}`;
+    });
+}
 
 // ========================
 // INIT

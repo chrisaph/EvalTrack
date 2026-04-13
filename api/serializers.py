@@ -102,6 +102,8 @@ class EvaluationSerializer(serializers.ModelSerializer):
         instance.save()
 
         if objectives_data is not None:
+            existing_ids = [obj.get('id') for obj in objectives_data if obj.get('id')]
+            instance.objectives.exclude(id__in=existing_ids).delete()
             for index, obj_data in enumerate(objectives_data, start=1):
                 obj_id = obj_data.get('id')
 
