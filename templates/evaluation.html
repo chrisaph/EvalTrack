@@ -213,16 +213,22 @@ for (let i = 0; i < objectiveDivs.length; i++) {
         return;
     }
 
-    objectives.push({
-        id: parseInt(div.querySelector(".employee_actual").dataset.id) || null,
+    const rawId = div.querySelector(".employee_actual").dataset.id;
 
-        description: div.querySelector(".description").value,
-        due_when: div.querySelector(".due_when").value,
-        weight: parseFloat(div.querySelector(".weight").value),
-        measure: div.querySelector(".measure").value,
-        target: div.querySelector(".target").value,
-        employee_actual: parseFloat(div.querySelector(".employee_actual").value)
-    });
+const obj = {
+    description: div.querySelector(".description").value,
+    due_when: div.querySelector(".due_when").value,
+    weight: parseFloat(div.querySelector(".weight").value),
+    measure: div.querySelector(".measure").value,
+    target: div.querySelector(".target").value,
+    employee_actual: parseFloat(div.querySelector(".employee_actual").value)
+};
+
+if (rawId) {
+    obj.id = parseInt(rawId); // ✅ ONLY include if exists
+}
+
+objectives.push(obj);
 }
     console.log("OBJECTIVES SENT:", objectives);
     const totalWeight = objectives.reduce((sum, obj) => sum + obj.weight, 0);
@@ -244,7 +250,7 @@ for (let i = 0; i < objectiveDivs.length; i++) {
 let url = `${API_BASE}/evaluations/`;
 let method = "POST";
 
-if (evaluationId) {
+if (evaluationId !== null && evaluationId !== undefined) {
     url = `${API_BASE}/evaluations/${evaluationId}/`;
     method = "PATCH";
 }

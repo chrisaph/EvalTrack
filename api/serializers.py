@@ -102,14 +102,21 @@ class EvaluationSerializer(serializers.ModelSerializer):
         instance.save()
 
         if objectives_data is not None:
-            for obj_data in objectives_data:
+            for index, obj_data in enumerate(objectives_data, start=1):
                 obj_id = obj_data.get('id')
 
-                try:
-                    obj = instance.objectives.get(id=obj_id)
-                except Objective.DoesNotExist:
-                    continue
+                if obj_id:
+                    # 🔥 UPDATE EXISTING
+                    try:
+                        obj = instance.objectives.get(id=obj_id)
+                    except Objective.DoesNotExist:
+                        continue
+                else:
+                    # 🔥 CREATE NEW OBJECTIVE
+                    obj = Objective(evaluation=instance)
 
+                # 🔥 APPLY FIELDS (for BOTH cases)
+                obj.order = index
                 obj.description = obj_data.get('description', obj.description)
                 obj.due_when = obj_data.get('due_when', obj.due_when)
                 obj.weight = obj_data.get('weight', obj.weight)
@@ -134,8 +141,12 @@ class EvaluationSerializer(serializers.ModelSerializer):
             date_completed=timezone.now().date()
         )
 
-        for obj_data in objectives_data:
-            Objective.objects.create(evaluation=evaluation, **obj_data)
+        for index, obj_data in enumerate(objectives_data, start=1):
+            Objective.objects.create(
+                evaluation=evaluation,
+                order=index,  # 🔥 FIX HERE
+                **obj_data
+            )
 
         return evaluation
 
