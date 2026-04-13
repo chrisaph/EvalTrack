@@ -204,61 +204,61 @@ async function submitEvaluation() {
     }
 
 
-let objectives = [];
+    let objectives = [];
 
-for (let i = 0; i < objectiveDivs.length; i++) {
-    const div = objectiveDivs[i];
+    for (let i = 0; i < objectiveDivs.length; i++) {
+        const div = objectiveDivs[i];
 
-    const description = div.querySelector(".description").value.trim();
-    const due_when = div.querySelector(".due_when").value;
-    const weight = parseFloat(div.querySelector(".weight").value);
-    const measure = div.querySelector(".measure").value.trim();
-    const target = div.querySelector(".target").value.trim();
-    const actual = parseFloat(div.querySelector(".employee_actual").value);
+        const description = div.querySelector(".description").value.trim();
+        const due_when = div.querySelector(".due_when").value;
+        const weight = parseFloat(div.querySelector(".weight").value);
+        const measure = div.querySelector(".measure").value.trim();
+        const target = div.querySelector(".target").value.trim();
+        const actual = parseFloat(div.querySelector(".employee_actual").value);
 
-    if (!description || !due_when || !weight || !measure || !target || isNaN(actual)) {
-        alert("All objective fields must be filled");
-        submitBtn.disabled = false; // ✅ FIX
-        return;
+        if (!description || !due_when || !weight || !measure || !target || isNaN(actual)) {
+            alert("All objective fields must be filled");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        if (weight <= 0) {
+            alert("Weight must be greater than 0");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        if (actual > 110) {
+            alert("Employee actual cannot exceed 110%");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        const rawId = div.querySelector(".employee_actual").dataset.id;
+
+        const obj = {
+            description: div.querySelector(".description").value,
+            due_when: div.querySelector(".due_when").value,
+            weight: parseFloat(div.querySelector(".weight").value),
+            measure: div.querySelector(".measure").value,
+            target: div.querySelector(".target").value,
+            employee_actual: parseFloat(div.querySelector(".employee_actual").value)
+        };
+
+        if (rawId) {
+            obj.id = parseInt(rawId); // ✅ ONLY include if exists
+        }
+
+        objectives.push(obj);
     }
-
-    if (weight <= 0) {
-        alert("Weight must be greater than 0");
-        submitBtn.disabled = false; // ✅ FIX
-        return;
-    }
-
-    if (actual > 110) {
-        alert("Employee actual cannot exceed 110%");
-        submitBtn.disabled = false; // ✅ FIX
-        return;
-    }
-
-    const rawId = div.querySelector(".employee_actual").dataset.id;
-
-const obj = {
-    description: div.querySelector(".description").value,
-    due_when: div.querySelector(".due_when").value,
-    weight: parseFloat(div.querySelector(".weight").value),
-    measure: div.querySelector(".measure").value,
-    target: div.querySelector(".target").value,
-    employee_actual: parseFloat(div.querySelector(".employee_actual").value)
-};
-
-if (rawId) {
-    obj.id = parseInt(rawId); // ✅ ONLY include if exists
-}
-
-objectives.push(obj);
-}
     console.log("OBJECTIVES SENT:", objectives);
     const totalWeight = objectives.reduce((sum, obj) => sum + obj.weight, 0);
     const maxWeight = {{ employee.level.individual_percentage }};
 
     if (totalWeight > maxWeight) {
-    alert(`Total weight cannot exceed ${maxWeight}%`);
-    submitBtn.disabled = false; // ✅ FIX
-    return;
+        alert(`Total weight cannot exceed ${maxWeight}%`);
+        submitBtn.disabled = false; // ✅ FIX
+        return;
     }
 
     const payload = {
@@ -268,16 +268,16 @@ objectives.push(obj);
         objectives: objectives
     };
 
-let url = `${API_BASE}/evaluations/`;
-let method = "POST";
+    let url = `${API_BASE}/evaluations/`;
+    let method = "POST";
 
-if (evaluationId !== null && evaluationId !== undefined) {
-    url = `${API_BASE}/evaluations/${evaluationId}/`;
-    method = "PATCH";
-}
+    if (evaluationId !== null && evaluationId !== undefined) {
+        url = `${API_BASE}/evaluations/${evaluationId}/`;
+        method = "PATCH";
+    }
 
-const res = await fetch(url, {
-    method: method,
+    const res = await fetch(url, {
+        method: method,
         headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": getCSRFToken()
@@ -285,21 +285,26 @@ const res = await fetch(url, {
         body: JSON.stringify(payload)
     });
 
+    const data = await res.json();  // ✅ move this up
+
     if (res.ok) {
         alert("Evaluation submitted successfully!");
-        window.location.href = "/";  // ✅ redirect
+        window.location.href = "/";
 
     } else {
-        const err = await res.json();
-        console.log(err);
-        alert(JSON.stringify(err, null, 2));
-        {#const err = await res.json();#}
-        {#console.error(err);#}
-        {#alert("Error submitting evaluation");#}
-        submitBtn.disabled = false; // 🔥 re-enable if failed
+        console.log(data);
+
+        // 🔥 CLEAN ERROR MESSAGE
+        const errorMessage =
+            data.non_field_errors?.[0] ||
+            Object.values(data)[0]?.[0] ||
+            "Something went wrong";
+
+        alert(errorMessage);
+
+        submitBtn.disabled = false; // re-enable
     }
 }
-
 function removeObjective(button) {
     const container = document.getElementById("objectives-container");
 

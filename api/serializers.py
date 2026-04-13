@@ -53,16 +53,15 @@ class ObjectiveSerializer(serializers.ModelSerializer):
 class EvaluationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         objectives = data.get('objectives', [])
-
         employee = data.get('employee') or getattr(self.instance, 'employee', None)
 
-        if employee:
-            total_weight = sum(obj.get('weight', 0) for obj in objectives)
+        if employee and objectives:
             max_weight = employee.level.individual_percentage
+            total_weight = sum(obj.get('weight', 0) for obj in objectives)
 
-            if total_weight > max_weight:
+            if total_weight != max_weight:
                 raise serializers.ValidationError(
-                    f"Total weight cannot exceed {max_weight}%"
+                    f"Total weight must equal {max_weight}%"
                 )
 
         return data
