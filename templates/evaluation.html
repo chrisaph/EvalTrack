@@ -21,6 +21,7 @@
         <!-- Level (auto-filled) -->
 <div class="col-span-2 text-sm text-gray-700 bg-gray-100 p-3 rounded">
     <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+    <p><strong>Name:</strong> {{ employee.name }}</p>
     <p><strong>Position:</strong> {{ employee.position }}</p>
     <p><strong>Department:</strong> {{ employee.department }}</p>
     <p><strong>Level:</strong> {{ employee.level.name }}</p>
@@ -46,9 +47,11 @@
 
     <!-- COMMENTS -->
     <div class="mt-6">
-    <textarea id="employee_comment">
-    {{ evaluation.employee_comment|default:'' }}
-    </textarea>
+    <label class="block text-sm font-medium mb-1">Employee Comments</label>
+
+    <textarea id="employee_comment"
+        placeholder="Write your overall comments here..."
+        class="w-full border p-3 rounded h-32 resize-none">{{ evaluation.employee_comment|default:'' }}</textarea>
     </div>
 
     <!-- SUBMIT -->
@@ -137,21 +140,32 @@ function addObjective(data = null) {
     div.className = "border p-3 rounded mt-2";
 
     div.innerHTML = `
-    <p class="font-semibold mb-1">Goal ${objectiveCount}</p>
+<p class="font-semibold mb-2">Goal ${objectiveCount}</p>
 
-    <input value="${data?.description || ''}" placeholder="Description" class="border p-1 w-full mb-1 description">
+<label class="text-sm font-medium">Description</label>
+<input value="${data?.description || ''}" placeholder="Enter description"
+class="border p-2 w-full mb-2 description rounded">
 
-    <input type="date" value="${data?.due_when || ''}" class="border p-1 w-full mb-1 due_when">
+<label class="text-sm font-medium">Due Date</label>
+<input type="date" value="${data?.due_when || ''}"
+class="border p-2 w-full mb-2 due_when rounded">
 
-    <input type="number" value="${data?.weight || ''}" placeholder="Weight %" class="border p-1 w-full mb-1 weight">
+<label class="text-sm font-medium">Weight (%)</label>
+<input type="number" value="${data?.weight || ''}" placeholder="Enter weight"
+class="border p-2 w-full mb-2 weight rounded">
 
-    <input value="${data?.measure || ''}" placeholder="Measure" class="border p-1 w-full mb-1 measure">
+<label class="text-sm font-medium">Measure</label>
+<input value="${data?.measure || ''}" placeholder="Enter measure"
+class="border p-2 w-full mb-2 measure rounded">
 
-    <input value="${data?.target || ''}" placeholder="Target" class="border p-1 w-full mb-1 target">
+<label class="text-sm font-medium">Target</label>
+<input value="${data?.target || ''}" placeholder="Enter target"
+class="border p-2 w-full mb-2 target rounded">
 
-    <input type="number" value="${data?.employee_actual || ''}" placeholder="Employee Actual (%)"
-    class="border p-1 w-full mb-1 employee_actual"
-    data-id="${data?.id || ''}">
+<label class="text-sm font-medium">Employee Actual (%)</label>
+<input type="number" value="${data?.employee_actual || ''}" placeholder="Enter actual"
+class="border p-2 w-full mb-2 employee_actual rounded"
+data-id="${data?.id || ''}">
 `;
 
     container.appendChild(div);
