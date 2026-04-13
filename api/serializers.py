@@ -144,9 +144,11 @@ class EvaluationSerializer(serializers.ModelSerializer):
         )
 
         for index, obj_data in enumerate(objectives_data, start=1):
+            obj_data.pop('order', None)  # 🔥 REMOVE duplicate
+
             Objective.objects.create(
                 evaluation=evaluation,
-                order=index,  # 🔥 FIX HERE
+                order=index,
                 **obj_data
             )
 

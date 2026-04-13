@@ -144,7 +144,7 @@ function addObjective(data = null) {
     <p class="font-semibold text-lg">Goal ${objectiveCount}</p>
     <button type="button"
         onclick="removeObjective(this)"
-        class="text-red-500 text-sm hover:underline">
+        class="text-red-500 font-semibold text-base hover:underline">
         Delete
     </button>
 </div>
@@ -303,13 +303,21 @@ const res = await fetch(url, {
 function removeObjective(button) {
     const container = document.getElementById("objectives-container");
 
-    // remove the goal div
+    // ❗ prevent deleting below 3
+    if (container.children.length <= 3) {
+        alert("Minimum 3 objectives required");
+        return;
+    }
+
+    // ❗ confirmation popup
+    if (!confirm("Delete this objective?")) return;
+
+    // ✅ delete
     button.closest("div.border").remove();
 
-    // update count
     objectiveCount--;
 
-    // 🔥 re-number goals
+    // 🔄 re-number goals
     const goals = container.querySelectorAll("div.border");
     goals.forEach((goal, index) => {
         goal.querySelector("p").innerText = `Goal ${index + 1}`;
