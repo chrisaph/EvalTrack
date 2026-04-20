@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EvalTrack - Year End Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow">
+
+    <h1 class="text-2xl font-bold mb-4">Year-End Evaluation</h1>
+
+    <!-- EMPLOYEE INFO -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+
+        <!-- Employee Search -->
+
+
+        <!-- Level (auto-filled) -->
+<div class="col-span-2 text-sm text-gray-700 bg-gray-100 p-3 rounded">
+    <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+    <p><strong>Name:</strong> {{ employee.name }}</p>
+    <p><strong>Position:</strong> {{ employee.position }}</p>
+    <p><strong>Department:</strong> {{ employee.department }}</p>
+    <p><strong>Level:</strong> {{ employee.level.name }}</p>
+    <p><strong>Immediate Superior:</strong> {{ employee.manager.name|default:"-" }}</p>
+    <p><strong>Company Objective:</strong> {{ employee.level.company_percentage }}%</p>
+    <p><strong>Individual Objective:</strong> {{ employee.level.individual_percentage }}%</p>
+    <hr class="my-2">
+    <p id="period"></p>
+</div>
+
+
+</div>
+    <!-- OBJECTIVES -->
+    <div>
+        <h2 class="text-xl font-semibold mb-2">Objectives</h2>
+
+        <div id="objectives-container"></div>
+
+        <button onclick="addObjective()" class="mt-3 bg-blue-500 text-white px-4 py-2 rounded">
+            + Add Objective
+        </button>
+    </div>
+
+    <!-- COMMENTS -->
+    <div class="mt-6">
+    <label class="block text-sm font-medium mb-1">Employee Comments</label>
+
+    <textarea id="employee_comment"
+        placeholder="Write your overall comments here..."
+        class="w-full border p-3 rounded h-32 resize-none">{{ evaluation.employee_comment|default:'' }}</textarea>
+    </div>
+
+    <!-- SUBMIT -->
+    <button id="submitBtn" onclick="submitEvaluation()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded">
+    Submit Evaluation
+    </button>
+
+</div>
+
+<script>
+const evaluationId = {{ evaluation.id|default:"null" }};
+const existingEvaluation = {
+        objectives: [
+            {% if evaluation %}
+                {% for obj in evaluation.objectives.all %}
+                {
+                    id: {{ obj.id }},
+                    description: "{{ obj.description|escapejs }}",
+                    due_when: "{{ obj.due_when|date:'Y-m-d' }}",
+                    weight: {{ obj.weight }},
+                    measure: "{{ obj.measure|escapejs }}",
+                    target: "{{ obj.target|escapejs }}",
+                    employee_actual: {{ obj.employee_actual|default:0 }}
+                },
+                {% endfor %}
+            {% endif %}
+        ],
+        employee_comment: "{{ evaluation.employee_comment|default:''|escapejs }}"
+    };
+
+    function getCSRFToken() {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+}
+
+const API_BASE = "http://127.0.0.1:8000/api";
+
+
+
+
+
+//Year subtract for performance period
+function setPerformancePeriod() {
+    const year = new Date().getFullYear() - 1;
+    document.getElementById("period").innerHTML = `<strong>Year:</strong> ${year}`;
+}
+
+
+{#//SEARCH EMPLOYEE:#}
+{##}
+{#async function loadEmployees() {#}
+{#    const res = await fetch(`${API_BASE}/employees/`);#}
+{#    const data = await res.json();#}
+{##}
+{#    employeesData = data;#}
+{##}
+{#    const list = document.getElementById("employeeList");#}
+{##}
+{#    data.forEach(emp => {#}
+{#        const option = document.createElement("option");#}
+{#        option.value = emp.name; // searchable text#}
+{#        option.dataset.id = emp.id;#}
+{#        list.appendChild(option);#}
+{#    });#}
+
+
+
+// ========================
+// ADD OBJECTIVE
+// ========================
+let objectiveCount = 0;
+
+function addObjective(data = null) {
+    if (objectiveCount >= 5) {
+        alert("Maximum 5 objectives only");
+        return;
+    }
+
+    objectiveCount++;
+
+    const container = document.getElementById("objectives-container");
+
+    const div = document.createElement("div");
+    div.className = "border p-3 rounded mt-2";
+
+    div.innerHTML = `
+<div class="flex justify-between items-center mb-2">
+    <p class="font-semibold text-lg">Goal ${objectiveCount}</p>
+    <button type="button"
+        onclick="removeObjective(this)"
+        class="text-red-500 font-semibold text-base hover:underline">
+        Delete
+    </button>
+</div>
+
+<label class="text-sm font-medium">Description</label>
+<input value="${data?.description || ''}" placeholder="Enter description"
+class="border p-2 w-full mb-2 description rounded">
+
+<label class="text-sm font-medium">Due Date</label>
+<input type="date" value="${data?.due_when || ''}"
+class="border p-2 w-full mb-2 due_when rounded">
+
+<label class="text-sm font-medium">Weight (%)</label>
+<input type="number" value="${data?.weight || ''}" placeholder="Enter weight"
+class="border p-2 w-full mb-2 weight rounded">
+
+<label class="text-sm font-medium">Measure</label>
+<input value="${data?.measure || ''}" placeholder="Enter measure"
+class="border p-2 w-full mb-2 measure rounded">
+
+<label class="text-sm font-medium">Target</label>
+<input value="${data?.target || ''}" placeholder="Enter target"
+class="border p-2 w-full mb-2 target rounded">
+
+<label class="text-sm font-medium">Employee Actual (%)</label>
+<input type="number" value="${data?.employee_actual || ''}" placeholder="Enter actual"
+class="border p-2 w-full mb-2 employee_actual rounded"
+data-id="${data?.id || ''}">
+`;
+
+    container.appendChild(div);
+}
+
+
+// ========================
+// SUBMIT
+// ========================
+async function submitEvaluation() {
+
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+
+
+    const employee = {{ employee.id }};
+
+
+    const period = (new Date().getFullYear() - 1).toString();
+    const comment = document.getElementById("employee_comment").value;
+
+    const objectiveDivs = document.querySelectorAll("#objectives-container > div");
+
+    if (objectiveDivs.length < 3) {
+        alert("Minimum 3 objectives required");
+        submitBtn.disabled = false; // ✅ FIX
+        return;
+    }
+
+
+    let objectives = [];
+
+    for (let i = 0; i < objectiveDivs.length; i++) {
+        const div = objectiveDivs[i];
+
+        const description = div.querySelector(".description").value.trim();
+        const due_when = div.querySelector(".due_when").value;
+        const weight = parseFloat(div.querySelector(".weight").value);
+        const measure = div.querySelector(".measure").value.trim();
+        const target = div.querySelector(".target").value.trim();
+        const actual = parseFloat(div.querySelector(".employee_actual").value);
+
+        if (!description || !due_when || !weight || !measure || !target || isNaN(actual)) {
+            alert("All objective fields must be filled");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        if (weight <= 0) {
+            alert("Weight must be greater than 0");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        if (actual > 110) {
+            alert("Employee actual cannot exceed 110%");
+            submitBtn.disabled = false; // ✅ FIX
+            return;
+        }
+
+        const rawId = div.querySelector(".employee_actual").dataset.id;
+
+        const obj = {
+            description: div.querySelector(".description").value,
+            due_when: div.querySelector(".due_when").value,
+            weight: parseFloat(div.querySelector(".weight").value),
+            measure: div.querySelector(".measure").value,
+            target: div.querySelector(".target").value,
+            employee_actual: parseFloat(div.querySelector(".employee_actual").value)
+        };
+
+        if (rawId) {
+            obj.id = parseInt(rawId); // ✅ ONLY include if exists
+        }
+
+        objectives.push(obj);
+    }
+    console.log("OBJECTIVES SENT:", objectives);
+    const totalWeight = objectives.reduce((sum, obj) => sum + obj.weight, 0);
+    const maxWeight = {{ employee.level.individual_percentage }};
+
+    if (totalWeight > maxWeight) {
+        alert(`Total weight cannot exceed ${maxWeight}%`);
+        submitBtn.disabled = false; // ✅ FIX
+        return;
+    }
+
+    const payload = {
+        employee: employee,
+        performance_period: period,
+        employee_comment: comment,
+        objectives: objectives
+    };
+
+    let url = `${API_BASE}/evaluations/`;
+    let method = "POST";
+
+    if (evaluationId !== null && evaluationId !== undefined) {
+        url = `${API_BASE}/evaluations/${evaluationId}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();  // ✅ move this up
+
+    if (res.ok) {
+        alert("Evaluation submitted successfully!");
+        window.location.href = "/";
+
+    } else {
+        console.log(data);
+
+        // 🔥 CLEAN ERROR MESSAGE
+        const errorMessage =
+            data.non_field_errors?.[0] ||
+            Object.values(data)[0]?.[0] ||
+            "Something went wrong";
+
+        alert(errorMessage);
+
+        submitBtn.disabled = false; // re-enable
+    }
+}
+function removeObjective(button) {
+    const container = document.getElementById("objectives-container");
+
+    // ❗ prevent deleting below 3
+    if (container.children.length <= 3) {
+        alert("Minimum 3 objectives required");
+        return;
+    }
+
+    // ❗ confirmation popup
+    if (!confirm("Delete this objective?")) return;
+
+    // ✅ delete
+    button.closest("div.border").remove();
+
+    objectiveCount--;
+
+    // 🔄 re-number goals
+    const goals = container.querySelectorAll("div.border");
+    goals.forEach((goal, index) => {
+        goal.querySelector("p").innerText = `Goal ${index + 1}`;
+    });
+}
+
+// ========================
+// INIT
+// ========================
+
+setPerformancePeriod();
+
+if (existingEvaluation.objectives.length > 0) {
+    existingEvaluation.objectives.forEach(obj => addObjective(obj));
+    document.getElementById("employee_comment").value = existingEvaluation.employee_comment;
+} else {
+    addObjective();
+    addObjective();
+    addObjective();
+}
+
+</script>
+
+</body>
+</html>

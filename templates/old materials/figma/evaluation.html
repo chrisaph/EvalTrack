@@ -183,11 +183,8 @@
         }
 
         textarea.form-input {
-            width: 100%;
-            min-height: 220px;
-            height: 240px;
             resize: vertical;
-            display: block;
+            min-height: 120px;
         }
 
         .btn-add {
@@ -310,26 +307,16 @@
                 <span>+</span> Add Objective
             </button>
 
-        <div style="margin-top: 2rem;">
-            <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
-                Employee Comments
-            </label>
+            <div style="margin-top: 2rem;">
+                <label class="form-label" style="display: block; margin-bottom: 0.5rem;">Employee Comments</label>
+                <textarea
+                    id="employee_comment"
+                    class="form-input"
+                    placeholder="Share your overall thoughts, achievements, and reflections on your performance...">{{ evaluation.employee_comment|default:'' }}</textarea>
+            </div>
 
-            <textarea
-                id="employee_comment"
-                class="form-input"
-                placeholder="Share your overall thoughts, achievements, and reflections on your performance...">
-                {{ evaluation.employee_comment|default:'' }}
-            </textarea>
-        </div>
-
-        <button id="submitBtn" onclick="submitEvaluation()" class="btn-submit">
-            Submit Evaluation
-        </button>
-
-        <div style="text-align: center; margin-top: 1rem;">
-            <button onclick="goBack()" class="btn-add" style="background:#6b7280;">
-                ← Back
+            <button id="submitBtn" onclick="submitEvaluation()" class="btn-submit">
+                Submit Evaluation
             </button>
         </div>
     </div>
@@ -609,9 +596,6 @@
             addObjective();
             addObjective();
             addObjective();
-        }
-    function goBack() {
-        window.history.back();
         }
     </script>
 </body>
