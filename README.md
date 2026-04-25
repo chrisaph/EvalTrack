@@ -42,15 +42,13 @@ Frontend → API → Django Backend → Database → Response → Frontend
 
 ---
 
-## ⚙️ Setup
+## ⚙️ Setup (PyCharm)
 
 ```bash
 git clone https://github.com/chrisaph/EvalTrack.git
 cd EvalTrack
 
-python -m venv .venv
-.venv\Scripts\activate
+pip install django
 
-pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
